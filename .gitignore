@@ -11,6 +11,7 @@ dist/
 build/
 .venv/
 venv/
+settings.local.json
 
 # Fivetran SDK debug output
 files/

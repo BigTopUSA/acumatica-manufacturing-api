@@ -1,11 +1,13 @@
 """
 Fivetran Connector SDK — Acumatica Manufacturing Endpoint
-Syncs all manufacturing entities incrementally via LastModifiedDateTime cursors.
+Syncs all manufacturing entities via full refresh.
+
+Note: this endpoint does NOT expose LastModifiedDateTime, so incremental
+sync by cursor is not possible. Every sync is a full refresh.
 """
 
 import requests
 import json
-from datetime import datetime, timezone
 from typing import Generator
 
 from fivetran_connector_sdk import Connector, Operations as op, Logging as log
@@ -13,104 +15,82 @@ from fivetran_connector_sdk import Connector, Operations as op, Logging as log
 # ---------------------------------------------------------------------------
 # Entity definitions
 # ---------------------------------------------------------------------------
-# Each entry:
-#   name          : Acumatica endpoint segment & Fivetran table name (snake_case)
-#   endpoint      : Acumatica REST path segment
-#   primary_key   : list of field(s) that uniquely identify a record
-#   incremental   : True if the entity exposes LastModifiedDateTime for filtering
-#   expand        : optional $expand parameter (comma-separated child collections)
+# Each parent entry may declare a child collection that comes back via $expand.
+# Acumatica's globally-unique `id` is used as the primary key everywhere — it's
+# reliable, present on every record, and avoids PK typos against business keys.
 # ---------------------------------------------------------------------------
 ENTITIES = [
     {
         "name": "bill_of_material",
         "endpoint": "BillOfMaterial",
-        "primary_key": ["InventoryID", "Revision"],
-        "incremental": True,
-        "expand": None,
-    },
-    {
-        "name": "bill_of_material_detail",
-        "endpoint": "BillOfMaterial",          # fetched via expand from BOM
-        "primary_key": ["InventoryID", "Revision", "LineNbr"],
-        "incremental": True,
-        "expand": "Details",
-        "_detail_key": "Details",              # child collection key in response
-        "_parent": "bill_of_material",
+        "expand": "Operations",
+        "child_table": "bill_of_material_operation",
+        "child_key": "Operations",
     },
     {
         "name": "production_order",
         "endpoint": "ProductionOrder",
-        "primary_key": ["OrderType", "ProductionNbr"],
-        "incremental": True,
         "expand": None,
     },
     {
         "name": "production_order_detail",
-        "endpoint": "ProductionOrder",
-        "primary_key": ["OrderType", "ProductionNbr", "LineNbr"],
-        "incremental": True,
-        "expand": "Details",
-        "_detail_key": "Details",
-        "_parent": "production_order",
+        "endpoint": "ProductionOrderDetail",
+        "expand": None,
     },
     {
         "name": "labor_entry",
         "endpoint": "LaborEntry",
-        "primary_key": ["BatchNbr", "LineNbr"],
-        "incremental": True,
-        "expand": None,
+        "expand": "Details",
+        "child_table": "labor_entry_detail",
+        "child_key": "Details",
     },
     {
         "name": "material_entry",
         "endpoint": "MaterialEntry",
-        "primary_key": ["BatchNbr", "LineNbr"],
-        "incremental": True,
-        "expand": None,
+        "expand": "Details",
+        "child_table": "material_entry_detail",
+        "child_key": "Details",
     },
-    {
-        "name": "estimate_item",
-        "endpoint": "EstimateItem",
-        "primary_key": ["EstimateID", "RevisionID"],
-        "incremental": True,
-        "expand": None,
-    },
-    # Reference / slowly-changing tables — full refresh on every sync
     {
         "name": "work_center",
         "endpoint": "WorkCenter",
-        "primary_key": ["WorkCenterID"],
-        "incremental": False,
         "expand": None,
     },
     {
         "name": "machine",
         "endpoint": "Machine",
-        "primary_key": ["MachineID"],
-        "incremental": False,
         "expand": None,
     },
     {
         "name": "shift",
         "endpoint": "Shift",
-        "primary_key": ["ShiftCD"],
-        "incremental": False,
         "expand": None,
     },
 ]
 
-# Page size for all paginated requests
-PAGE_SIZE = 100
+# All tables keyed by Acumatica's globally-unique `id` guid
+PRIMARY_KEY = ["id"]
 
-# Epoch used as the "beginning of time" cursor for first sync
-EPOCH = "1900-01-01T00:00:00Z"
+PAGE_SIZE = 100
 
 
 # ---------------------------------------------------------------------------
-# Auth helpers
+# Auth
 # ---------------------------------------------------------------------------
 
 def get_token(cfg: dict) -> str:
-    """Fetch an OAuth 2.0 access token using client_credentials grant."""
+    """
+    Return an OAuth access token.
+
+    Priority:
+      1. Static `access_token` in config (for local debug with a Postman-issued token).
+      2. client_credentials grant against the tenant's IdentityServer.
+    """
+    static = cfg.get("access_token")
+    if static:
+        log.info("Using static access_token from configuration")
+        return static
+
     token_url = f"{cfg['acumatica_url'].rstrip('/')}/identity/connect/token"
     resp = requests.post(
         token_url,
@@ -139,46 +119,20 @@ def build_headers(token: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# API fetch helpers
+# Fetch
 # ---------------------------------------------------------------------------
 
-def build_filter(last_modified: str | None) -> str | None:
-    """Build an OData $filter string for incremental sync."""
-    if not last_modified or last_modified == EPOCH:
-        return None
-    # Acumatica accepts datetimeoffset literals
-    return f"LastModifiedDateTime gt datetimeoffset'{last_modified}'"
-
-
-def fetch_page(
-    session: requests.Session,
-    base_url: str,
-    endpoint: str,
-    skip: int,
-    odata_filter: str | None,
-    expand: str | None,
-) -> list[dict]:
-    """Fetch a single page of records from the Acumatica REST API."""
-    params = {
-        "$top": PAGE_SIZE,
-        "$skip": skip,
-    }
-    if odata_filter:
-        params["$filter"] = odata_filter
+def fetch_page(session, base_url, endpoint, skip, expand):
+    params = {"$top": PAGE_SIZE, "$skip": skip}
     if expand:
         params["$expand"] = expand
-
     url = f"{base_url}/{endpoint}"
     resp = session.get(url, params=params, timeout=60)
-
     if resp.status_code == 404:
         log.warning(f"Endpoint not found (404): {endpoint} — skipping")
         return []
-
     resp.raise_for_status()
-
     data = resp.json()
-    # Acumatica returns a list directly, or sometimes wraps in {"value": [...]}
     if isinstance(data, list):
         return data
     if isinstance(data, dict) and "value" in data:
@@ -186,130 +140,73 @@ def fetch_page(
     return []
 
 
-def fetch_all_pages(
-    session: requests.Session,
-    base_url: str,
-    endpoint: str,
-    odata_filter: str | None,
-    expand: str | None,
-) -> Generator[dict, None, None]:
-    """Paginate through all records for an endpoint, yielding each record."""
+def fetch_all_pages(session, base_url, endpoint, expand) -> Generator[dict, None, None]:
     skip = 0
     while True:
-        page = fetch_page(session, base_url, endpoint, skip, odata_filter, expand)
+        page = fetch_page(session, base_url, endpoint, skip, expand)
         if not page:
             break
         for record in page:
             yield record
         if len(page) < PAGE_SIZE:
-            break  # Last page
+            break
         skip += PAGE_SIZE
 
 
 # ---------------------------------------------------------------------------
-# Record normalisation
+# Normalisation
 # ---------------------------------------------------------------------------
 
-def flatten_value(v) -> any:
-    """
-    Acumatica wraps most field values as {"value": X}.
-    Unwrap them so we get clean scalar values into Fivetran.
-    """
+def flatten_value(v):
+    """Acumatica wraps most field values as {"value": X}. Unwrap to scalar."""
     if isinstance(v, dict) and "value" in v and len(v) == 1:
         return v["value"]
     if isinstance(v, dict):
-        return json.dumps(v)   # Nested objects → JSON string (safe fallback)
+        return json.dumps(v) if v else None
     return v
 
 
-def normalise_record(raw: dict, prefix: str = "") -> dict:
-    """Flatten an Acumatica response record into a plain dict."""
+def normalise_record(raw: dict) -> dict:
+    """Flatten an Acumatica record. Drops child collections and _links metadata."""
     out = {}
     for k, v in raw.items():
-        if k.startswith("_"):           # Skip Acumatica metadata fields
+        if k == "_links":
             continue
-        col = f"{prefix}{k}" if prefix else k
         if isinstance(v, list):
-            # Inline child arrays are handled separately; skip here
-            continue
-        out[col] = flatten_value(v)
+            continue  # children handled separately
+        out[k] = flatten_value(v)
     return out
 
 
-def extract_last_modified(record: dict) -> str | None:
-    """Pull LastModifiedDateTime from a raw Acumatica record."""
-    raw = record.get("LastModifiedDateTime")
-    if raw is None:
-        return None
-    if isinstance(raw, dict):
-        return raw.get("value")
-    return str(raw)
-
-
 # ---------------------------------------------------------------------------
-# Per-entity sync
+# Sync
 # ---------------------------------------------------------------------------
 
-def sync_entity(
-    session: requests.Session,
-    base_url: str,
-    entity: dict,
-    state: dict,
-) -> Generator:
-    """
-    Sync a single entity. Yields Fivetran op.upsert calls.
-    Updates state in-place with the latest cursor seen.
-    """
+def sync_entity(session, base_url, entity, state) -> Generator:
     name = entity["name"]
     endpoint = entity["endpoint"]
-    incremental = entity["incremental"]
-    expand = entity["expand"]
-    detail_key = entity.get("_detail_key")
-    is_detail_entity = "_parent" in entity
+    expand = entity.get("expand")
+    child_key = entity.get("child_key")
+    child_table = entity.get("child_table")
 
-    # Detail entities are pulled as expanded children of the parent —
-    # we don't make separate top-level API calls for them.
-    if is_detail_entity:
-        return
+    log.info(f"Syncing {name} (full refresh)")
+    parent_count = 0
+    child_count = 0
 
-    cursor_key = f"cursor_{name}"
-    last_modified = state.get(cursor_key, EPOCH) if incremental else None
-    odata_filter = build_filter(last_modified) if incremental else None
+    for raw in fetch_all_pages(session, base_url, endpoint, expand):
+        yield op.upsert(name, normalise_record(raw))
+        parent_count += 1
 
-    log.info(f"Syncing {name} | incremental={incremental} | cursor={last_modified or 'N/A'}")
-
-    latest_ts = last_modified or EPOCH
-    record_count = 0
-
-    for raw in fetch_all_pages(session, base_url, endpoint, odata_filter, expand):
-        # --- Parent record ---
-        row = normalise_record(raw)
-        yield op.upsert(name, row)
-        record_count += 1
-
-        # --- Child detail records (if expand was requested) ---
-        if detail_key and detail_key in raw:
-            detail_entity_name = f"{name}_detail"
-            for child in raw.get(detail_key, []):
-                # Inherit parent keys so each child row is self-contained
+        if child_key and child_table:
+            parent_id = raw.get("id")
+            for child in raw.get(child_key, []) or []:
                 child_row = normalise_record(child)
-                # Copy parent PK fields into child row
-                for pk in entity["primary_key"]:
-                    if pk in row:
-                        child_row.setdefault(pk, row[pk])
-                yield op.upsert(detail_entity_name, child_row)
+                # Tie children back to the parent even if the business keys don't
+                child_row.setdefault("parent_id", parent_id)
+                yield op.upsert(child_table, child_row)
+                child_count += 1
 
-        # Track the most recent LastModifiedDateTime seen
-        if incremental:
-            ts = extract_last_modified(raw)
-            if ts and ts > latest_ts:
-                latest_ts = ts
-
-    # Persist the cursor after syncing this entity
-    if incremental:
-        state[cursor_key] = latest_ts
-
-    log.info(f"  → {record_count} records synced for {name}")
+    log.info(f"  → {parent_count} {name} rows" + (f", {child_count} {child_table} rows" if child_table else ""))
     yield op.checkpoint(state)
 
 
@@ -318,36 +215,25 @@ def sync_entity(
 # ---------------------------------------------------------------------------
 
 def schema(configuration: dict):
-    """
-    Declare table schemas for Fivetran.
-    Primary keys are required; all other columns are inferred at sync time.
-    """
     tables = []
     for entity in ENTITIES:
-        tables.append({
-            "table": entity["name"],
-            "primary_key": entity["primary_key"],
-        })
+        tables.append({"table": entity["name"], "primary_key": PRIMARY_KEY})
+        if entity.get("child_table"):
+            tables.append({"table": entity["child_table"], "primary_key": PRIMARY_KEY})
     return tables
 
 
 def update(configuration: dict, state: dict):
-    """Main sync function called by Fivetran on every sync run."""
-    # Build base API URL
     acumatica_url = configuration["acumatica_url"].rstrip("/")
     api_version = configuration.get("api_version", "24.200.001")
-    base_url = f"{acumatica_url}/entity/Manufacturing/{api_version}"
+    base_url = f"{acumatica_url}/entity/MANUFACTURING/{api_version}"
 
     log.info(f"Connecting to Acumatica Manufacturing API: {base_url}")
 
-    # Acquire OAuth token
     token = get_token(configuration)
-
-    # Build a persistent session for connection reuse
     session = requests.Session()
     session.headers.update(build_headers(token))
 
-    # Work through each entity
     for entity in ENTITIES:
         try:
             yield from sync_entity(session, base_url, entity, state)
@@ -361,12 +247,9 @@ def update(configuration: dict, state: dict):
     log.info("Manufacturing sync complete.")
 
 
-# ---------------------------------------------------------------------------
-# Connector wiring
-# ---------------------------------------------------------------------------
-
 connector = Connector(update=update, schema=schema)
 
 if __name__ == "__main__":
-    # Local debug run: reads configuration.json from the same directory
-    connector.debug()
+    with open("configuration.json") as f:
+        _cfg = json.load(f)
+    connector.debug(configuration=_cfg)
