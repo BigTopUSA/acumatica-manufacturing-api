@@ -1,36 +1,39 @@
-23-Apr 15:31:51.778 INFO ⚡ sdk › debugging connector at: C:\Users\SamStein\BigTop\acumatica-manufacturing-api [0m
-23-Apr 15:31:51.779 INFO ⚡ sdk enforcing 8 GB memory limit on connector process to simulate production constraints [0m
-23-Apr 15:31:53.832 INFO ⚡ sdk › starting connector tester [0m
-23-Apr 15:31:54.494 INFO ⚡ debugger ℹ️ connector tester version: 2.26.0420.001 
-23-Apr 15:31:54.522 INFO ⚡ debugger ℹ️ destination schema path: C:\Users\SamStein\BigTop\acumatica-manufacturing-api\files/warehouse.db (schema=tester) 
-23-Apr 15:31:57.949 INFO ⚡ debugger previous state:
+24-Apr 10:48:56.016 INFO ⚡ sdk › debugging connector at: C:\Users\SamStein\BigTop\acumatica-manufacturing-api [0m
+24-Apr 10:48:56.019 INFO ⚡ sdk enforcing 8 GB memory limit on connector process to simulate production constraints [0m
+24-Apr 10:48:58.087 INFO ⚡ sdk › starting connector tester [0m
+24-Apr 10:48:59.932 INFO ⚡ debugger ℹ️ connector tester version: 2.26.0420.001 
+24-Apr 10:48:59.966 INFO ⚡ debugger ℹ️ destination schema path: C:\Users\SamStein\BigTop\acumatica-manufacturing-api\files/warehouse.db (schema=tester) 
+24-Apr 10:49:03.612 INFO ⚡ debugger previous state:
 {} 
-23-Apr 15:31:59.304 INFO ⚡ sdk calling schema() [0m
-23-Apr 15:31:59.357 INFO ⚡ debugger schema change detected: tester.bill_of_material 
-23-Apr 15:31:59.366 INFO ⚡ debugger schema change detected: tester.bill_of_material_operation 
-23-Apr 15:31:59.367 INFO ⚡ debugger schema change detected: tester.production_order 
-23-Apr 15:31:59.367 INFO ⚡ debugger schema change detected: tester.production_order_detail 
-23-Apr 15:31:59.367 INFO ⚡ debugger schema change detected: tester.labor_entry 
-23-Apr 15:31:59.367 INFO ⚡ debugger schema change detected: tester.labor_entry_detail 
-23-Apr 15:31:59.367 INFO ⚡ debugger schema change detected: tester.material_entry 
-23-Apr 15:31:59.367 INFO ⚡ debugger schema change detected: tester.material_entry_detail 
-23-Apr 15:31:59.367 INFO ⚡ debugger schema change detected: tester.work_center 
-23-Apr 15:31:59.368 INFO ⚡ debugger schema change detected: tester.machine 
-23-Apr 15:31:59.368 INFO ⚡ debugger schema change detected: tester.shift 
-23-Apr 15:31:59.402 INFO ⚡ sdk calling update() [0m
-23-Apr 15:31:59.402 INFO Connecting to Acumatica Manufacturing API: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001 [0m
-23-Apr 15:31:59.402 INFO Using static access_token from configuration [0m
-23-Apr 15:31:59.402 INFO Syncing bill_of_material (full refresh) [0m
-23-Apr 15:32:06.250 INFO   → 198 bill_of_material rows, 2928 bill_of_material_operation rows [0m
-23-Apr 15:32:06.252 INFO Syncing production_order (full refresh) [0m
-23-Apr 15:32:08.317 INFO   → 280 production_order rows [0m
-23-Apr 15:32:08.747 INFO Syncing production_order_detail (full refresh) [0m
-23-Apr 15:32:10.011 INFO   → 280 production_order_detail rows [0m
-23-Apr 15:32:10.013 INFO Syncing labor_entry (full refresh) [0m
-23-Apr 15:32:10.527 INFO   → 15 labor_entry rows, 79 labor_entry_detail rows [0m
-23-Apr 15:32:10.534 INFO Syncing material_entry (full refresh) [0m
-23-Apr 15:45:20.358 INFO ⚡ debugger checkpoint recorded: {} 
-23-Apr 15:45:20.360 INFO ⚡ debugger SYNC PROGRESS — elapsed 00:13:22
+24-Apr 10:49:05.162 INFO ⚡ sdk calling schema() [0m
+24-Apr 10:49:05.244 INFO ⚡ debugger schema change detected: tester.bill_of_material 
+24-Apr 10:49:05.247 INFO ⚡ debugger schema change detected: tester.bill_of_material_operation 
+24-Apr 10:49:05.247 INFO ⚡ debugger schema change detected: tester.production_order 
+24-Apr 10:49:05.247 INFO ⚡ debugger schema change detected: tester.production_order_detail 
+24-Apr 10:49:05.247 INFO ⚡ debugger schema change detected: tester.labor_entry 
+24-Apr 10:49:05.247 INFO ⚡ debugger schema change detected: tester.labor_entry_detail 
+24-Apr 10:49:05.247 INFO ⚡ debugger schema change detected: tester.material_entry 
+24-Apr 10:49:05.247 INFO ⚡ debugger schema change detected: tester.material_entry_detail 
+24-Apr 10:49:05.249 INFO ⚡ debugger schema change detected: tester.work_center 
+24-Apr 10:49:05.249 INFO ⚡ debugger schema change detected: tester.machine 
+24-Apr 10:49:05.249 INFO ⚡ debugger schema change detected: tester.shift 
+24-Apr 10:49:05.276 INFO ⚡ sdk calling update() [0m
+24-Apr 10:49:05.278 INFO Connecting to Acumatica Manufacturing API: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001 [0m
+24-Apr 10:49:05.278 INFO Using refresh_token grant [0m
+24-Apr 10:49:06.156 INFO Refresh token rotated; new value: ybNxv1RA5ErXpm7F5jDvut0cebycFxCKEIr0itJzh5o [0m
+24-Apr 10:49:06.161 INFO Syncing bill_of_material (full refresh) [0m
+24-Apr 10:49:07.766 INFO ⚡ debugger table created: tester.bill_of_material 
+24-Apr 10:49:07.964 INFO ⚡ debugger table created: tester.bill_of_material_operation 
+24-Apr 10:49:15.889 INFO   → 198 bill_of_material rows, 2928 bill_of_material_operation rows [0m
+24-Apr 10:49:15.893 INFO Syncing production_order (full refresh) [0m
+24-Apr 10:49:21.750 INFO   → 280 production_order rows [0m
+24-Apr 10:49:21.763 INFO Syncing production_order_detail (full refresh) [0m
+24-Apr 10:49:23.112 INFO   → 280 production_order_detail rows [0m
+24-Apr 10:49:23.116 INFO Syncing labor_entry (full refresh) [0m
+24-Apr 10:49:23.612 INFO   → 15 labor_entry rows, 79 labor_entry_detail rows [0m
+24-Apr 10:49:23.622 INFO Syncing material_entry (full refresh) [0m
+24-Apr 11:04:49.843 INFO ⚡ debugger checkpoint recorded: {"refresh_token": "ybNxv1RA5ErXpm7F5jDvut0cebycFxCKEIr0itJzh5o"} 
+24-Apr 11:04:49.847 INFO ⚡ debugger SYNC PROGRESS — elapsed 00:15:46
 Operation       | Counts    
 ----------------+------------
 Upserts         | 3126      
@@ -43,142 +46,33 @@ Checkpoints     | 1
 
 Note: Debug performance depends on your local machine; production runs faster.
 Docs: https://fivetran.com/docs/connector-sdk/technical-reference#systemresources 
-23-Apr 15:45:20.582 INFO ⚡ debugger table created: tester.production_order 
-23-Apr 15:47:41.715 INFO ⚡ debugger checkpoint recorded: {} 
-23-Apr 15:47:41.760 INFO ⚡ debugger table created: tester.production_order_detail 
-23-Apr 15:48:05.636 INFO ⚡ debugger checkpoint recorded: {} 
-23-Apr 15:48:05.688 INFO ⚡ debugger table created: tester.labor_entry 
-23-Apr 15:48:05.790 INFO ⚡ debugger table created: tester.labor_entry_detail 
-23-Apr 15:48:26.107 INFO ⚡ debugger checkpoint recorded: {} 
-23-Apr 15:48:26.164 INFO ⚡ debugger table created: tester.material_entry 
-23-Apr 15:48:26.277 INFO ⚡ debugger table created: tester.material_entry_detail 
-[196m23-Apr 15:48:35.654 SEVERE HTTP error syncing material_entry: 401 Client Error: Unauthorized for url: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001/MaterialEntry?%24top=100&%24skip=200&%24expand=Details [0m
-[196m23-Apr 15:48:35.690 SEVERE ⚡ sdk failed while executing update() error: 401 Client Error: Unauthorized for url: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001/MaterialEntry?%24top=100&%24skip=200&%24expand=Details [0m
-[196m23-Apr 15:48:39.046 SEVERE ⚡ debugger SYNC FAILED with error : UNKNOWN: Exception iterating responses: failed while executing update() error: 401 Client Error: Unauthorized for url: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001/MaterialEntry?%24top=100&%24skip=200&%24expand=Details
-[0mTraceback (most recent call last):
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\__init__.py", line 474, in Update
-    raise exception_queue.get()
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\__init__.py", line 446, in run_update
-    for _ in result:
-             ^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 239, in update
-    yield from sync_entity(session, base_url, entity, state)
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 196, in sync_entity
-    for raw in fetch_all_pages(session, base_url, endpoint, expand):
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 146, in fetch_all_pages
-    page = fetch_page(session, base_url, endpoint, skip, expand)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 134, in fetch_page
-    resp.raise_for_status()
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\requests\models.py", line 1028, in raise_for_status
-    raise HTTPError(http_error_msg, response=self)
-requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001/MaterialEntry?%24top=100&%24skip=200&%24expand=Details
-[196m. Failure details: status = Status{code=UNKNOWN, description=Exception iterating responses: failed while executing update() error: 401 Client Error: Unauthorized for url: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001/MaterialEntry?%24top=100&%24skip=200&%24expand=Details
-[0mTraceback (most recent call last):
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\__init__.py", line 474, in Update
-    raise exception_queue.get()
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\__init__.py", line 446, in run_update
-    for _ in result:
-             ^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 239, in update
-    yield from sync_entity(session, base_url, entity, state)
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 196, in sync_entity
-    for raw in fetch_all_pages(session, base_url, endpoint, expand):
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 146, in fetch_all_pages
-    page = fetch_page(session, base_url, endpoint, skip, expand)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 134, in fetch_page
-    resp.raise_for_status()
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\requests\models.py", line 1028, in raise_for_status
-    raise HTTPError(http_error_msg, response=self)
-requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001/MaterialEntry?%24top=100&%24skip=200&%24expand=Details
-[196m, cause=null}, code = UNKNOWN, description = Exception iterating responses: failed while executing update() error: 401 Client Error: Unauthorized for url: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001/MaterialEntry?%24top=100&%24skip=200&%24expand=Details
-[0mTraceback (most recent call last):
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\__init__.py", line 474, in Update
-    raise exception_queue.get()
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\__init__.py", line 446, in run_update
-    for _ in result:
-             ^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 239, in update
-    yield from sync_entity(session, base_url, entity, state)
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 196, in sync_entity
-    for raw in fetch_all_pages(session, base_url, endpoint, expand):
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 146, in fetch_all_pages
-    page = fetch_page(session, base_url, endpoint, skip, expand)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 134, in fetch_page
-    resp.raise_for_status()
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\requests\models.py", line 1028, in raise_for_status
-    raise HTTPError(http_error_msg, response=self)
-requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001/MaterialEntry?%24top=100&%24skip=200&%24expand=Details
-, cause = null, trailers = Metadata() 
-[196mException: io.grpc.StatusRuntimeException: UNKNOWN: Exception iterating responses: failed while executing update() error: 401 Client Error: Unauthorized for url: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001/MaterialEntry?%24top=100&%24skip=200&%24expand=Details
-[0mTraceback (most recent call last):
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\__init__.py", line 474, in Update
-    raise exception_queue.get()
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\__init__.py", line 446, in run_update
-    for _ in result:
-             ^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 239, in update
-    yield from sync_entity(session, base_url, entity, state)
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 196, in sync_entity
-    for raw in fetch_all_pages(session, base_url, endpoint, expand):
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 146, in fetch_all_pages
-    page = fetch_page(session, base_url, endpoint, skip, expand)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 134, in fetch_page
-    resp.raise_for_status()
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\requests\models.py", line 1028, in raise_for_status
-    raise HTTPError(http_error_msg, response=self)
-requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001/MaterialEntry?%24top=100&%24skip=200&%24expand=Details
-
-[196m23-Apr 15:48:39.310 SEVERE ⚡ debugger SYNC FAILED — elapsed 00:16:41
-[0mOperation       | Counts    
-----------------+------------
-Upserts         | 8074      
-Updates         | 0         
-Deletes         | 0         
-Truncates       | 0         
-Schema changes  | 11        
-Checkpoints     | 4         
-
-
-[196mError: UNKNOWN: Exception iterating responses: failed while executing update() error: 401 Client Error: Unauthorized for url: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001/MaterialEntry?%24top=100&%24skip=200&%24expand=Details
-[0mTraceback (most recent call last):
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\__init__.py", line 474, in Update
-    raise exception_queue.get()
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\__init__.py", line 446, in run_update
-    for _ in result:
-             ^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 239, in update
-    yield from sync_entity(session, base_url, entity, state)
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 196, in sync_entity
-    for raw in fetch_all_pages(session, base_url, endpoint, expand):
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 146, in fetch_all_pages
-    page = fetch_page(session, base_url, endpoint, skip, expand)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 134, in fetch_page
-    resp.raise_for_status()
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\requests\models.py", line 1028, in raise_for_status
-    raise HTTPError(http_error_msg, response=self)
-requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://bigtopshelters.acumatica.com/entity/MANUFACTURING/24.200.001/MaterialEntry?%24top=100&%24skip=200&%24expand=Details
-
-See logs above for details. 
+24-Apr 11:04:50.068 INFO ⚡ debugger table created: tester.production_order 
+24-Apr 11:07:34.832 INFO ⚡ debugger checkpoint recorded: {"refresh_token": "ybNxv1RA5ErXpm7F5jDvut0cebycFxCKEIr0itJzh5o"} 
+24-Apr 11:07:34.890 INFO ⚡ debugger table created: tester.production_order_detail 
+24-Apr 11:08:05.331 INFO ⚡ debugger checkpoint recorded: {"refresh_token": "ybNxv1RA5ErXpm7F5jDvut0cebycFxCKEIr0itJzh5o"} 
+24-Apr 11:08:05.408 INFO ⚡ debugger table created: tester.labor_entry 
+24-Apr 11:08:05.561 INFO ⚡ debugger table created: tester.labor_entry_detail 
+24-Apr 11:08:30.505 INFO ⚡ debugger checkpoint recorded: {"refresh_token": "ybNxv1RA5ErXpm7F5jDvut0cebycFxCKEIr0itJzh5o"} 
+24-Apr 11:08:30.599 INFO ⚡ debugger table created: tester.material_entry 
+24-Apr 11:08:30.761 INFO ⚡ debugger table created: tester.material_entry_detail 
+24-Apr 11:09:10.470 INFO   → 282 material_entry rows, 7940 material_entry_detail rows [0m
+24-Apr 11:09:10.475 INFO Syncing work_center (full refresh) [0m
+24-Apr 11:09:10.895 INFO   → 39 work_center rows [0m
+24-Apr 11:09:10.901 INFO Syncing machine (full refresh) [0m
+24-Apr 11:09:11.121 INFO   → 0 machine rows [0m
+24-Apr 11:09:11.123 INFO Syncing shift (full refresh) [0m
+24-Apr 11:09:11.297 INFO   → 2 shift rows [0m
+24-Apr 11:09:11.300 INFO Manufacturing sync complete. [0m
 Traceback (most recent call last):
   File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\__init__.py", line 347, in debug
     for log_msg in run_tester(
                    ^^^^^^^^^^^
   File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\connector_helper.py", line 1701, in run_tester
     raise subprocess.CalledProcessError(return_code, redacted_cmd)
-subprocess.CalledProcessError: Command '['C:\\Users\\SamStein\\.ft_sdk_connector_tester\\bin\\java.exe', '-jar', 'C:\\Users\\SamStein\\.ft_sdk_connector_tester\\sdk_connector_tester.jar', '--connector-sdk=true', '--port=50051', '--working-dir=C:\\Users\\SamStein\\BigTop\\acumatica-manufacturing-api\\files', '--tester-type=source', '--state={}', '--configuration={"acumatica_url": "****", "client_id": "****", "client_secret": "****", "api_version": "****", "access_token": "****"}']' returned non-zero exit status 1.
+subprocess.CalledProcessError: Command '['C:\\Users\\SamStein\\.ft_sdk_connector_tester\\bin\\java.exe', '-jar', 'C:\\Users\\SamStein\\.ft_sdk_connector_tester\\sdk_connector_tester.jar', '--connector-sdk=true', '--port=50051', '--working-dir=C:\\Users\\SamStein\\BigTop\\acumatica-manufacturing-api\\files', '--tester-type=source', '--state={}', '--configuration={"acumatica_url": "****", "client_id": "****", "client_secret": "****", "api_version": "****", "refresh_token": "****"}']' returned non-zero exit status 1.
 
 Traceback (most recent call last):
-  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 255, in <module>
+  File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\connector.py", line 285, in <module>
     connector.debug(configuration=_cfg)
   File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\__init__.py", line 353, in debug
     raise e
@@ -187,4 +81,4 @@ Traceback (most recent call last):
                    ^^^^^^^^^^^
   File "C:\Users\SamStein\BigTop\acumatica-manufacturing-api\.venv\Lib\site-packages\fivetran_connector_sdk\connector_helper.py", line 1701, in run_tester
     raise subprocess.CalledProcessError(return_code, redacted_cmd)
-subprocess.CalledProcessError: Command '['C:\\Users\\SamStein\\.ft_sdk_connector_tester\\bin\\java.exe', '-jar', 'C:\\Users\\SamStein\\.ft_sdk_connector_tester\\sdk_connector_tester.jar', '--connector-sdk=true', '--port=50051', '--working-dir=C:\\Users\\SamStein\\BigTop\\acumatica-manufacturing-api\\files', '--tester-type=source', '--state={}', '--configuration={"acumatica_url": "****", "client_id": "****", "client_secret": "****", "api_version": "****", "access_token": "****"}']' returned non-zero exit status 1.
+subprocess.CalledProcessError: Command '['C:\\Users\\SamStein\\.ft_sdk_connector_tester\\bin\\java.exe', '-jar', 'C:\\Users\\SamStein\\.ft_sdk_connector_tester\\sdk_connector_tester.jar', '--connector-sdk=true', '--port=50051', '--working-dir=C:\\Users\\SamStein\\BigTop\\acumatica-manufacturing-api\\files', '--tester-type=source', '--state={}', '--configuration={"acumatica_url": "****", "client_id": "****", "client_secret": "****", "api_version": "****", "refresh_token": "****"}']' returned non-zero exit status 1.

@@ -1,0 +1,17 @@
+24-Apr 11:41:59.001 INFO ⚡ sdk executing deploy: [0m
+24-Apr 11:41:59.001 INFO ⚡ sdk fivetran deploy --destination Snowflake_East_US2 --connection acumatica_manufacturing --api-key bW15OUpW******** --configuration configuration.json  [0m
+24-Apr 11:42:06.272 INFO ⚡ sdk Validation of requirements.txt completed. [0m
+24-Apr 11:42:07.511 INFO ⚡ sdk python version not specified; connection will use the default python version (3.13) [0m
+24-Apr 11:42:07.511 INFO ⚡ sdk set --python-version <version> in the deploy command or update it in your Fivetran dashboard [0m
+24-Apr 11:42:07.511 INFO ⚡ sdk › packaging project for upload [0m
+24-Apr 11:42:07.525 INFO ⚡ sdk loaded .gitignore with 12 patterns [0m
+24-Apr 11:42:07.560 INFO ⚡ sdk ✓ project packaged for upload [0m
+24-Apr 11:42:07.560 INFO ⚡ sdk › uploading package [0m
+24-Apr 11:42:08.380 INFO ⚡ sdk ✓ package uploaded [0m
+24-Apr 11:42:08.381 INFO ⚡ sdk   package id: cleave_anchovy [0m
+24-Apr 11:42:08.382 INFO ⚡ sdk › creating connection [0m
+24-Apr 11:42:10.078 INFO ⚡ sdk ✓ connection created [0m
+24-Apr 11:42:10.078 INFO ⚡ sdk   connection id: rescuer_headstone [0m
+24-Apr 11:42:10.078 INFO ⚡ sdk   runtime python version: 3.13 [0m
+24-Apr 11:42:10.078 INFO ⚡ sdk visit the Fivetran dashboard to start the initial sync: [0m
+24-Apr 11:42:10.078 INFO ⚡ sdk https://fivetran.com/dashboard/connectors/rescuer_headstone/status [0m

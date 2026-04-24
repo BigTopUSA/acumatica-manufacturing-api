@@ -78,20 +78,51 @@ PAGE_SIZE = 100
 # Auth
 # ---------------------------------------------------------------------------
 
-def get_token(cfg: dict) -> str:
+def get_token(cfg: dict, state: dict | None = None) -> str:
     """
     Return an OAuth access token.
 
     Priority:
-      1. Static `access_token` in config (for local debug with a Postman-issued token).
-      2. client_credentials grant against the tenant's IdentityServer.
+      1. refresh_token grant — production headless path. Refresh token is read
+         from state first (most recent), then config (initial bootstrap).
+      2. Static `access_token` in config — one-shot debug only.
+      3. client_credentials grant — requires that grant enabled on the client.
+
+    If the refresh_token rotates, the new value is written back to `state` so
+    Fivetran persists it via the next op.checkpoint().
     """
+    token_url = f"{cfg['acumatica_url'].rstrip('/')}/identity/connect/token"
+
+    refresh = (state or {}).get("refresh_token") or cfg.get("refresh_token")
+    if refresh:
+        log.info("Using refresh_token grant")
+        resp = requests.post(
+            token_url,
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": refresh,
+                "client_id": cfg["client_id"],
+                "client_secret": cfg["client_secret"],
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        new_refresh = data.get("refresh_token")
+        if new_refresh and new_refresh != refresh and state is not None:
+            state["refresh_token"] = new_refresh
+            # Full value is logged here ONLY because refresh tokens are single-use and,
+            # if the connector crashes before the state checkpoint lands, manually
+            # recovering the rotated token is the only way to avoid a full re-auth.
+            log.info(f"Refresh token rotated; new value: {new_refresh}")
+        return data["access_token"]
+
     static = cfg.get("access_token")
     if static:
         log.info("Using static access_token from configuration")
         return static
 
-    token_url = f"{cfg['acumatica_url'].rstrip('/')}/identity/connect/token"
+    log.info("Falling back to client_credentials grant")
     resp = requests.post(
         token_url,
         data={
@@ -106,7 +137,6 @@ def get_token(cfg: dict) -> str:
     token = resp.json().get("access_token")
     if not token:
         raise ValueError(f"No access_token in response: {resp.text[:200]}")
-    log.info("OAuth token acquired successfully")
     return token
 
 
@@ -230,7 +260,7 @@ def update(configuration: dict, state: dict):
 
     log.info(f"Connecting to Acumatica Manufacturing API: {base_url}")
 
-    token = get_token(configuration)
+    token = get_token(configuration, state)
     session = requests.Session()
     session.headers.update(build_headers(token))
 
