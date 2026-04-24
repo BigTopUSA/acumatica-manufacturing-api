@@ -1,0 +1,16 @@
+24-Apr 12:55:44.147 INFO ⚡ sdk executing deploy: [0m
+24-Apr 12:55:44.147 INFO ⚡ sdk fivetran deploy --destination Snowflake_East_US2 --connection acumatica_default_extras --api-key bW15OUpW******** --configuration configuration.json  [0m
+24-Apr 12:55:49.697 INFO ⚡ sdk Validation of requirements.txt completed. [0m
+24-Apr 12:55:50.537 INFO ⚡ sdk python version not specified; connection will use the default python version (3.13) [0m
+24-Apr 12:55:50.538 INFO ⚡ sdk set --python-version <version> in the deploy command or update it in your Fivetran dashboard [0m
+24-Apr 12:55:50.538 INFO ⚡ sdk › packaging project for upload [0m
+24-Apr 12:55:50.541 INFO ⚡ sdk ✓ project packaged for upload [0m
+24-Apr 12:55:50.541 INFO ⚡ sdk › uploading package [0m
+24-Apr 12:55:51.216 INFO ⚡ sdk ✓ package uploaded [0m
+24-Apr 12:55:51.218 INFO ⚡ sdk   package id: honorable_dime [0m
+24-Apr 12:55:51.218 INFO ⚡ sdk › creating connection [0m
+24-Apr 12:55:52.760 INFO ⚡ sdk ✓ connection created [0m
+24-Apr 12:55:52.760 INFO ⚡ sdk   connection id: monoclonal_innervation [0m
+24-Apr 12:55:52.760 INFO ⚡ sdk   runtime python version: 3.13 [0m
+24-Apr 12:55:52.760 INFO ⚡ sdk visit the Fivetran dashboard to start the initial sync: [0m
+24-Apr 12:55:52.760 INFO ⚡ sdk https://fivetran.com/dashboard/connectors/monoclonal_innervation/status [0m
