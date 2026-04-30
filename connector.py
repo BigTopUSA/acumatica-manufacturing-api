@@ -187,24 +187,32 @@ def fetch_all_pages(session, base_url, endpoint, expand) -> Generator[dict, None
 # Normalisation
 # ---------------------------------------------------------------------------
 
-def flatten_value(v):
-    """Acumatica wraps most field values as {"value": X}. Unwrap to scalar."""
-    if isinstance(v, dict) and "value" in v and len(v) == 1:
-        return v["value"]
-    if isinstance(v, dict):
-        return json.dumps(v) if v else None
-    return v
+def normalise_record(raw: dict, prefix: str = "") -> dict:
+    """
+    Flatten an Acumatica record into a flat dict of scalar columns.
 
-
-def normalise_record(raw: dict) -> dict:
-    """Flatten an Acumatica record. Drops child collections and _links metadata."""
+    - {"value": X} wrappers are unwrapped to the scalar.
+    - Nested complex objects (e.g. MainContact, Address) are recursively
+      flattened with underscore-joined keys: MainContact_Address_City.
+    - List values are skipped — child collections are handled separately.
+    - _links metadata is dropped.
+    """
     out = {}
     for k, v in raw.items():
         if k == "_links":
             continue
         if isinstance(v, list):
-            continue  # children handled separately
-        out[k] = flatten_value(v)
+            continue
+        col = f"{prefix}{k}" if prefix else k
+
+        if isinstance(v, dict) and len(v) == 1 and "value" in v:
+            out[col] = v["value"]
+        elif isinstance(v, dict) and v:
+            out.update(normalise_record(v, prefix=f"{col}_"))
+        elif isinstance(v, dict):
+            out[col] = None
+        else:
+            out[col] = v
     return out
 
 
