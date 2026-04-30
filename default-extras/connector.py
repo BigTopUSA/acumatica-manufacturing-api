@@ -33,6 +33,7 @@ ENTITIES = [
     {"name": "financial_period",        "endpoint": "FinancialPeriod",
         "children": [{"key": "Details", "table": "financial_period_detail"}]},
     {"name": "invoice",                 "endpoint": "Invoice",
+        "expand_inline": ["BillToContact", "ShipToContact"],
         "children": [{"key": "Details", "table": "invoice_detail"}]},
     {"name": "journal_transaction",     "endpoint": "JournalTransaction",
         "children": [{"key": "Details", "table": "journal_transaction_detail"}]},
@@ -46,13 +47,20 @@ ENTITIES = [
 
     # --- CRM ---
     {"name": "contact",                 "endpoint": "Contact",
+        "expand_inline": ["Address"],
         "children": [{"key": "Attributes", "table": "contact_attribute"}]},
     {"name": "employee",                "endpoint": "Employee",
+        "expand_inline": ["ContactInfo"],
         "children": [{"key": "Attributes", "table": "employee_attribute"}]},
     {"name": "sales_person",            "endpoint": "SalesPerson"},
 
     # --- Sales ---
     {"name": "customer",                "endpoint": "Customer",
+        "expand_inline": [
+            "MainContact/Address",
+            "BillingContact/Address",
+            "ShippingContact/Address",
+        ],
         "children": [
             {"key": "Contacts",   "table": "customer_contact"},
             {"key": "Attributes", "table": "customer_attribute"},
@@ -60,8 +68,13 @@ ENTITIES = [
     {"name": "customer_class",          "endpoint": "CustomerClass"},
     {"name": "customer_location",       "endpoint": "CustomerLocation"},
     {"name": "sales_invoice",           "endpoint": "SalesInvoice",
+        "expand_inline": ["BillToAddress", "ShipToAddress", "ShipToContact"],
         "children": [{"key": "Details", "table": "sales_invoice_detail"}]},
     {"name": "sales_order",             "endpoint": "SalesOrder",
+        "expand_inline": [
+            "BillToAddress", "ShipToAddress",
+            "BillToContact", "ShipToContact",
+        ],
         "children": [
             {"key": "Details",    "table": "sales_order_detail"},
             {"key": "Shipments",  "table": "sales_order_shipment"},
@@ -82,6 +95,10 @@ ENTITIES = [
     {"name": "purchase_receipt",        "endpoint": "PurchaseReceipt",
         "children": [{"key": "Details", "table": "purchase_receipt_detail"}]},
     {"name": "vendor",                  "endpoint": "Vendor",
+        "expand_inline": [
+            "MainContact/Address",
+            "ShippingContact/Address",
+        ],
         "children": [
             {"key": "Contacts",   "table": "vendor_contact"},
             {"key": "Attributes", "table": "vendor_attribute"},
@@ -242,7 +259,12 @@ def sync_entity(session, base_url, entity, state) -> Generator:
     name = entity["name"]
     endpoint = entity["endpoint"]
     children_spec = entity.get("children", [])
-    expand = ",".join(c["key"] for c in children_spec) if children_spec else None
+    inline_expansions = entity.get("expand_inline", [])
+
+    # Combined $expand: inline-singular (folded into parent record by the
+    # recursive flattener) + children (synced as their own tables).
+    expand_parts = list(inline_expansions) + [c["key"] for c in children_spec]
+    expand = ",".join(expand_parts) if expand_parts else None
 
     log.info(f"Syncing {name} (full refresh)")
     parent_count = 0
