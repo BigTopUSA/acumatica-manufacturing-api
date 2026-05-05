@@ -3,10 +3,11 @@
 This repo contains two custom Fivetran Connector SDK connectors that sync data
 from Acumatica into BigTop's Snowflake warehouse.
 
-| Connector | Folder | Acumatica Endpoint | Snowflake Schema |
+| Connector | Folder | Source | Snowflake Schema |
 |---|---|---|---|
-| Manufacturing | `./` (repo root) | `/entity/MANUFACTURING/{version}/` | `BT_RAW.ACUMATICA_MANUFACTURING` |
-| Default Extras | `./default-extras/` | `/entity/Default/{version}/` | `BT_RAW.ACUMATICA_DEFAULT_EXTRAS` |
+| Manufacturing | `./` (repo root) | Acumatica `/entity/MANUFACTURING/{version}/` | `BT_RAW.ACUMATICA_MANUFACTURING` |
+| Default Extras | `./default-extras/` | Acumatica `/entity/Default/{version}/` | `BT_RAW.ACUMATICA_DEFAULT_EXTRAS` |
+| JobTread | `./jobtread/` | JobTread Pave API (`api.jobtread.com/pave`) | `BT_RAW.JOBTREAD` *(scaffold — not yet deployed)* |
 
 `acumatica_default_extras` exists alongside the existing managed Fivetran
 Acumatica connector (`ACUMATICA_BTM`) — it covers what the managed one doesn't,
