@@ -20,9 +20,16 @@ GRANT_KEY = cfg["grant_key"]
 ORG_ID = cfg["organization_id"]
 
 
+HEADERS = {"Authorization": f"Bearer {GRANT_KEY}"}
+
+
 def pave(query: dict) -> dict:
-    r = requests.post(PAVE_URL, json=query, timeout=30)
-    return {"status": r.status_code, "body": r.json() if r.text else {}}
+    r = requests.post(PAVE_URL, json=query, headers=HEADERS, timeout=30)
+    try:
+        body = r.json() if r.text else {}
+    except Exception:
+        body = {"_raw_text": r.text}
+    return {"status": r.status_code, "body": body}
 
 
 def hr(s: str) -> None:
@@ -34,7 +41,7 @@ def hr(s: str) -> None:
 # ---------------------------------------------------------------------------
 hr("auth check — fetch organization id+name only")
 print(pave({
-    "query": {"organization": {"$": {"id": ORG_ID, "grantKey": GRANT_KEY},
+    "query": {"organization": {"$": {"id": ORG_ID},
                                 "id": {}, "name": {}}}
 }))
 
@@ -49,7 +56,7 @@ for guess in ["jobs", "customers", "vendors", "tasks", "documents",
               "lineItems", "costItems", "dailyLogs", "files"]:
     r = pave({
         "query": {"organization": {
-            "$": {"id": ORG_ID, "grantKey": GRANT_KEY},
+            "$": {"id": ORG_ID},
             guess: {"$": {"size": 1, "page": 1}, "nodes": {"id": {}}},
         }}
     })
@@ -65,7 +72,7 @@ hr("scalar field discovery on 'jobs' (replace if jobs isn't valid)")
 # Ask for invalid field — the error suggests valid sibling field names
 r = pave({
     "query": {"organization": {
-        "$": {"id": ORG_ID, "grantKey": GRANT_KEY},
+        "$": {"id": ORG_ID},
         "jobs": {"$": {"size": 1, "page": 1},
                  "nodes": {"___invalid___": {}}},
     }}
@@ -85,7 +92,7 @@ for args in [
 ]:
     r = pave({
         "query": {"organization": {
-            "$": {"id": ORG_ID, "grantKey": GRANT_KEY},
+            "$": {"id": ORG_ID},
             "jobs": {"$": args, "nodes": {"id": {}}},
         }}
     })
