@@ -78,21 +78,21 @@ ENTITIES = [
     {
         "name": "event",
         "collection": "events",
+        # event.account / event.job / event.location are polymorphic refs that
+        # Pave doesn't allow subselecting on this org — they return null/{}
+        # regardless. Only `organization` accepts {id, name}.
         "scalars": ["id", "type", "createdAt"],
         "relations": [
-            {"key": "account", "subselect": ["id", "name"]},
             {"key": "organization", "subselect": ["id", "name"]},
-            {"key": "location", "subselect": ["id", "name"]},
-            {"key": "job", "subselect": ["id", "name", "number"]},
         ],
     },
     {
         "name": "location",
         "collection": "locations",
+        # `address` field is opaque — no subselectable subfields on this org.
         "scalars": ["id", "name", "createdAt"],
         "relations": [
             {"key": "account", "subselect": ["id", "name"]},
-            {"key": "address", "subselect": ["id"]},
         ],
     },
     # `invoices` collection returned HTTP 400 "field 'id' is not expected" on
