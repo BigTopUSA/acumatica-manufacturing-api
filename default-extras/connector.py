@@ -61,6 +61,7 @@ ENTITIES = [
             "BillingContact/Address",
             "ShippingContact/Address",
         ],
+        "custom_fields": ["BAccount.AttributeCRMREFNO"],
         "children": [
             {"key": "Contacts",   "table": "customer_contact"},
             {"key": "Attributes", "table": "customer_attribute"},
@@ -75,6 +76,36 @@ ENTITIES = [
             "BillToAddress", "ShipToAddress",
             "BillToContact", "ShipToContact",
         ],
+        "custom_fields": [
+            # User-Defined Fields tab on the Sales Orders screen — surfaced
+            # as Acumatica Attributes on the Document section. Field IDs are
+            # the internal codes (UI labels in the comment).
+            "Document.AttributeACCESSORIE",   # Accessories
+            "Document.AttributeACCPERCENT",   # Accessories Percentage
+            "Document.AttributeCONEORDNBR",   # C1 Ord Nbr
+            "Document.AttributeELECTRICAL",   # Electrical
+            "Document.AttributeELEPERCT",     # Electrical Percentage
+            "Document.AttributeENDUSER",      # End Market User
+            "Document.AttributeFINALCHECK",   # Final Check
+            "Document.AttributeHOTDIPPER",    # Hot Dipper
+            "Document.AttributeINSTALLER1",   # Installer 1
+            "Document.AttributeINSTALLER2",   # Installer 2
+            "Document.AttributeINSTALLER3",   # Installer 3
+            "Document.AttributeINSTALLER4",   # Installer 4
+            "Document.AttributeINSTALLTEC",   # Install Tech
+            "Document.AttributeLIGHTNING",    # Lightning Protection
+            "Document.AttributePMTNBR",       # Payment Request #
+            "Document.AttributeSALESFORDR",   # Salesforce Opp #
+            "Document.AttributeSHLTRSIZE",    # Shelter Square Footage
+            "Document.AttributeSHLTRTYPE",    # Shelter Style
+            "Document.AttributeSKU",          # SKU
+            "Document.AttributeSOURCE",       # Source
+            "Document.AttributeTURNKEYINS",   # Turn-key Install
+            "Document.AttributeUNITS",        # Units
+            "Document.AttributeUSECASE",      # Shelter Use
+            "Document.AttributeVERTICALS",    # Sales Verticals
+            "Document.AttributeWARRANTY",     # Warranty
+        ],
         "children": [
             {"key": "Details",    "table": "sales_order_detail"},
             {"key": "Shipments",  "table": "sales_order_shipment"},
@@ -88,6 +119,7 @@ ENTITIES = [
 
     # --- Purchasing ---
     {"name": "purchase_order",          "endpoint": "PurchaseOrder",
+        "custom_fields": ["Document.AttributeSOREF"],
         "children": [
             {"key": "Details",    "table": "purchase_order_detail"},
             {"key": "TaxDetails", "table": "purchase_order_tax_detail"},
@@ -187,10 +219,12 @@ def build_headers(token: str) -> dict:
 # Fetch
 # ---------------------------------------------------------------------------
 
-def fetch_page(session, base_url, endpoint, skip, expand):
+def fetch_page(session, base_url, endpoint, skip, expand, custom):
     params = {"$top": PAGE_SIZE, "$skip": skip}
     if expand:
         params["$expand"] = expand
+    if custom:
+        params["$custom"] = custom
     url = f"{base_url}/{endpoint}"
     resp = session.get(url, params=params, timeout=120)
     if resp.status_code == 404:
@@ -205,10 +239,10 @@ def fetch_page(session, base_url, endpoint, skip, expand):
     return []
 
 
-def fetch_all_pages(session, base_url, endpoint, expand) -> Generator[dict, None, None]:
+def fetch_all_pages(session, base_url, endpoint, expand, custom) -> Generator[dict, None, None]:
     skip = 0
     while True:
-        page = fetch_page(session, base_url, endpoint, skip, expand)
+        page = fetch_page(session, base_url, endpoint, skip, expand, custom)
         if not page:
             break
         for record in page:
@@ -260,17 +294,23 @@ def sync_entity(session, base_url, entity, state) -> Generator:
     endpoint = entity["endpoint"]
     children_spec = entity.get("children", [])
     inline_expansions = entity.get("expand_inline", [])
+    custom_fields = entity.get("custom_fields", [])
 
     # Combined $expand: inline-singular (folded into parent record by the
     # recursive flattener) + children (synced as their own tables).
     expand_parts = list(inline_expansions) + [c["key"] for c in children_spec]
     expand = ",".join(expand_parts) if expand_parts else None
 
+    # $custom pulls user-defined / Attribute fields that aren't returned by
+    # default. Each entry is "Section.FieldName" — recursive flattener will
+    # produce columns like custom_document_attribute_shltrtype.
+    custom = ",".join(custom_fields) if custom_fields else None
+
     log.info(f"Syncing {name} (full refresh)")
     parent_count = 0
     child_counts = {c["table"]: 0 for c in children_spec}
 
-    for raw in fetch_all_pages(session, base_url, endpoint, expand):
+    for raw in fetch_all_pages(session, base_url, endpoint, expand, custom):
         yield op.upsert(name, normalise_record(raw))
         parent_count += 1
         parent_id = raw.get("id")
