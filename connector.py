@@ -23,9 +23,14 @@ ENTITIES = [
     {
         "name": "bill_of_material",
         "endpoint": "BillOfMaterial",
-        "expand": "Operations",
+        # Materials (AMBomMatl) are nested one level under each operation, so we
+        # expand both the operations and their material lines in one call.
+        "expand": "Operations,Operations/Material",
         "child_table": "bill_of_material_operation",
         "child_key": "Operations",
+        # Grandchild: each operation's Material[] → bill_of_material_material.
+        "grandchild_key": "Material",
+        "grandchild_table": "bill_of_material_material",
     },
     {
         "name": "production_order",
@@ -226,10 +231,13 @@ def sync_entity(session, base_url, entity, state) -> Generator:
     expand = entity.get("expand")
     child_key = entity.get("child_key")
     child_table = entity.get("child_table")
+    grandchild_key = entity.get("grandchild_key")
+    grandchild_table = entity.get("grandchild_table")
 
     log.info(f"Syncing {name} (full refresh)")
     parent_count = 0
     child_count = 0
+    grandchild_count = 0
 
     for raw in fetch_all_pages(session, base_url, endpoint, expand):
         yield op.upsert(name, normalise_record(raw))
@@ -244,7 +252,22 @@ def sync_entity(session, base_url, entity, state) -> Generator:
                 yield op.upsert(child_table, child_row)
                 child_count += 1
 
-    log.info(f"  → {parent_count} {name} rows" + (f", {child_count} {child_table} rows" if child_table else ""))
+                # Grandchildren (e.g. BOM operation → material lines). Tag with
+                # both the top-level parent id and the immediate child's id.
+                if grandchild_key and grandchild_table:
+                    child_id = child.get("id")
+                    for grandchild in child.get(grandchild_key, []) or []:
+                        gc_row = normalise_record(grandchild)
+                        gc_row.setdefault("parent_id", parent_id)
+                        gc_row.setdefault("operation_id", child_id)
+                        yield op.upsert(grandchild_table, gc_row)
+                        grandchild_count += 1
+
+    log.info(
+        f"  → {parent_count} {name} rows"
+        + (f", {child_count} {child_table} rows" if child_table else "")
+        + (f", {grandchild_count} {grandchild_table} rows" if grandchild_table else "")
+    )
     yield op.checkpoint(state)
 
 
@@ -258,6 +281,8 @@ def schema(configuration: dict):
         tables.append({"table": entity["name"], "primary_key": PRIMARY_KEY})
         if entity.get("child_table"):
             tables.append({"table": entity["child_table"], "primary_key": PRIMARY_KEY})
+        if entity.get("grandchild_table"):
+            tables.append({"table": entity["grandchild_table"], "primary_key": PRIMARY_KEY})
     return tables
 
 

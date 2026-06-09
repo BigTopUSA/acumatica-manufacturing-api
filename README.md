@@ -34,12 +34,13 @@ toward billing. The first sync was the expensive one; ongoing cost is low.
 
 ## Tables Synced — Manufacturing
 
-11 tables in `ACUMATICA_MANUFACTURING`:
+12 tables in `ACUMATICA_MANUFACTURING`:
 
 | Fivetran Table | Acumatica Endpoint |
 |---|---|
 | `bill_of_material` | `BillOfMaterial` |
 | `bill_of_material_operation` | `BillOfMaterial` → `$expand=Operations` |
+| `bill_of_material_material` | `BillOfMaterial` → `$expand=Operations/Material` (AMBomMatl; tagged with `operation_id` + `parent_id`) |
 | `production_order` | `ProductionOrder` |
 | `production_order_detail` | `ProductionOrderDetail` (separate top-level endpoint) |
 | `labor_entry` | `LaborEntry` |
