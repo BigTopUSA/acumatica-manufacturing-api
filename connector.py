@@ -83,13 +83,32 @@ PAGE_SIZE = 100
 # Auth
 # ---------------------------------------------------------------------------
 
+def _post_token(token_url: str, payload: dict) -> requests.Response:
+    """POST to the token endpoint, surfacing the OAuth error body on failure.
+
+    `raise_for_status()` hides the response body, but the body is exactly what
+    tells us *why* a 400 happened (`invalid_grant` vs `invalid_client` vs
+    `unauthorized_client`). Log it so the next failure is diagnosable.
+    """
+    resp = requests.post(token_url, data=payload, timeout=30)
+    if not resp.ok:
+        log.warning(
+            f"Token endpoint returned {resp.status_code} for "
+            f"grant_type={payload.get('grant_type')}: {resp.text[:300]}"
+        )
+    return resp
+
+
 def get_token(cfg: dict, state: dict | None = None) -> str:
     """
     Return an OAuth access token.
 
     Priority:
-      1. refresh_token grant — production headless path. Refresh token is read
-         from state first (most recent), then config (initial bootstrap).
+      1. refresh_token grant — production headless path. Candidate tokens are
+         tried in order: the (freshest) value in state, then the config
+         bootstrap value. This implements the documented recovery contract:
+         if the state token is stale/consumed, we fall back to the config token,
+         so a fresh deploy with new credentials recovers automatically.
       2. Static `access_token` in config — one-shot debug only.
       3. client_credentials grant — requires that grant enabled on the client.
 
@@ -97,46 +116,67 @@ def get_token(cfg: dict, state: dict | None = None) -> str:
     Fivetran persists it via the next op.checkpoint().
     """
     token_url = f"{cfg['acumatica_url'].rstrip('/')}/identity/connect/token"
+    if state is None:
+        state = {}
 
-    refresh = (state or {}).get("refresh_token") or cfg.get("refresh_token")
-    if refresh:
-        log.info("Using refresh_token grant")
-        resp = requests.post(
+    cfg_refresh = cfg.get("refresh_token")
+
+    # If the operator dropped a NEW refresh_token into config (it differs from the
+    # one we last bootstrapped from), it supersedes whatever single-use token is
+    # parked in Fivetran state — that state token is almost certainly the stale /
+    # consumed one that caused the failure. Without this, state always wins and a
+    # "update config + redeploy" recovery never actually takes effect.
+    if cfg_refresh and state.get("config_refresh_seen") != cfg_refresh:
+        log.info("New refresh_token detected in configuration; resetting stored token")
+        state["refresh_token"] = cfg_refresh
+        state["config_refresh_seen"] = cfg_refresh
+
+    # Try the freshest token first (state), then fall back to the config bootstrap
+    # token if the state token has gone stale. De-duplicate so we don't replay the
+    # same dead token twice.
+    candidates = []
+    for tok in (state.get("refresh_token"), cfg_refresh):
+        if tok and tok not in candidates:
+            candidates.append(tok)
+
+    for i, refresh in enumerate(candidates):
+        log.info(f"Using refresh_token grant (candidate {i + 1}/{len(candidates)})")
+        resp = _post_token(
             token_url,
-            data={
+            {
                 "grant_type": "refresh_token",
                 "refresh_token": refresh,
                 "client_id": cfg["client_id"],
                 "client_secret": cfg["client_secret"],
             },
-            timeout=30,
         )
-        resp.raise_for_status()
+        if not resp.ok:
+            continue  # stale token — try the next candidate
         data = resp.json()
         new_refresh = data.get("refresh_token")
-        if new_refresh and new_refresh != refresh and state is not None:
+        if new_refresh:
             state["refresh_token"] = new_refresh
-            # Full value is logged here ONLY because refresh tokens are single-use and,
-            # if the connector crashes before the state checkpoint lands, manually
-            # recovering the rotated token is the only way to avoid a full re-auth.
-            log.info(f"Refresh token rotated; new value: {new_refresh}")
+            if new_refresh != refresh:
+                # Never log the full token — Fivetran logs are inspectable and a
+                # refresh token is a live credential. A short suffix is enough to
+                # confirm rotation happened and correlate across runs.
+                log.info(f"Refresh token rotated (…{new_refresh[-6:]})")
         return data["access_token"]
 
     static = cfg.get("access_token")
     if static:
-        log.info("Using static access_token from configuration")
+        log.info("Refresh grant failed/absent; using static access_token from configuration")
         return static
 
-    log.info("Falling back to client_credentials grant")
-    resp = requests.post(
+    log.info("Refresh grant failed/absent; falling back to client_credentials grant")
+    resp = _post_token(
         token_url,
-        data={
+        {
             "grant_type": "client_credentials",
             "client_id": cfg["client_id"],
             "client_secret": cfg["client_secret"],
             "scope": "api",
         },
-        timeout=30,
     )
     resp.raise_for_status()
     token = resp.json().get("access_token")
