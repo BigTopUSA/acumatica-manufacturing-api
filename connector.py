@@ -193,16 +193,34 @@ def build_headers(token: str) -> dict:
     }
 
 
+def _reauth(session, configuration, state) -> None:
+    """Mint a fresh access token mid-sync and swap it into the shared session.
+
+    Acumatica access tokens live only ~1 hour, but a full refresh of every
+    entity can run longer than that. Rather than pre-computing expiry, we
+    re-auth reactively when a request 401s. get_token() uses (and rotates) the
+    refresh_token in `state`, so the credential chain keeps moving.
+    """
+    token = get_token(configuration, state)
+    session.headers.update(build_headers(token))
+
+
 # ---------------------------------------------------------------------------
 # Fetch
 # ---------------------------------------------------------------------------
 
-def fetch_page(session, base_url, endpoint, skip, expand):
+def fetch_page(session, base_url, endpoint, skip, expand, configuration, state):
     params = {"$top": PAGE_SIZE, "$skip": skip}
     if expand:
         params["$expand"] = expand
     url = f"{base_url}/{endpoint}"
     resp = session.get(url, params=params, timeout=60)
+    if resp.status_code == 401:
+        # Access token almost certainly expired mid-sync. Re-auth once and retry;
+        # if it 401s again the raise_for_status() below surfaces a real auth error.
+        log.info(f"401 on {endpoint} @ skip={skip}; refreshing access token and retrying")
+        _reauth(session, configuration, state)
+        resp = session.get(url, params=params, timeout=60)
     if resp.status_code == 404:
         log.warning(f"Endpoint not found (404): {endpoint} — skipping")
         return []
@@ -215,10 +233,10 @@ def fetch_page(session, base_url, endpoint, skip, expand):
     return []
 
 
-def fetch_all_pages(session, base_url, endpoint, expand) -> Generator[dict, None, None]:
+def fetch_all_pages(session, base_url, endpoint, expand, configuration, state) -> Generator[dict, None, None]:
     skip = 0
     while True:
-        page = fetch_page(session, base_url, endpoint, skip, expand)
+        page = fetch_page(session, base_url, endpoint, skip, expand, configuration, state)
         if not page:
             break
         for record in page:
@@ -265,7 +283,7 @@ def normalise_record(raw: dict, prefix: str = "") -> dict:
 # Sync
 # ---------------------------------------------------------------------------
 
-def sync_entity(session, base_url, entity, state) -> Generator:
+def sync_entity(session, base_url, entity, configuration, state) -> Generator:
     name = entity["name"]
     endpoint = entity["endpoint"]
     expand = entity.get("expand")
@@ -279,7 +297,7 @@ def sync_entity(session, base_url, entity, state) -> Generator:
     child_count = 0
     grandchild_count = 0
 
-    for raw in fetch_all_pages(session, base_url, endpoint, expand):
+    for raw in fetch_all_pages(session, base_url, endpoint, expand, configuration, state):
         yield op.upsert(name, normalise_record(raw))
         parent_count += 1
 
@@ -339,7 +357,7 @@ def update(configuration: dict, state: dict):
 
     for entity in ENTITIES:
         try:
-            yield from sync_entity(session, base_url, entity, state)
+            yield from sync_entity(session, base_url, entity, configuration, state)
         except requests.exceptions.HTTPError as e:
             log.severe(f"HTTP error syncing {entity['name']}: {e}")
             raise

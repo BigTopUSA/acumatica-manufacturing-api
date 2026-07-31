@@ -8,10 +8,16 @@ which links an invoice line back to its originating sales order.
 
 This sync is intentionally comprehensive: every available entity and child
 collection. Overlap with ACUMATICA_BTM is expected and handled downstream.
+
+Sync is incremental where the Default endpoint supports it: each entity carries
+a modified-timestamp cursor and only rows changed since the last high-water mark
+are pulled. A few entities expose no usable timestamp and stay full-refresh; see
+the incremental cursor policy below.
 """
 
 import requests
 import json
+from datetime import datetime
 from typing import Generator
 
 from fivetran_connector_sdk import Connector, Operations as op, Logging as log
@@ -167,6 +173,40 @@ PAGE_SIZE = 100
 
 
 # ---------------------------------------------------------------------------
+# Incremental cursor policy
+# ---------------------------------------------------------------------------
+# Probed against the Default endpoint on 2026-07-31: every entity exposes a
+# filterable modified-timestamp EXCEPT the three in FULL_REFRESH_ONLY, which
+# carry no usable timestamp ($filter on it 500s). Those are tiny reference /
+# rarely-changing tables, so a full refresh each run costs almost nothing.
+# SalesOrder is the lone entity whose field is named `LastModified` rather than
+# `LastModifiedDateTime`.
+DEFAULT_CURSOR_FIELD = "LastModifiedDateTime"
+CURSOR_FIELD_OVERRIDES = {"sales_order": "LastModified"}
+FULL_REFRESH_ONLY = {"sub_account", "physical_inventory_review", "units_of_measure"}
+
+
+def cursor_field_for(entity: dict) -> str | None:
+    """Timestamp field to use as this entity's incremental cursor, or None to
+    always full-refresh it."""
+    name = entity["name"]
+    if name in FULL_REFRESH_ONLY:
+        return None
+    return CURSOR_FIELD_OVERRIDES.get(name, DEFAULT_CURSOR_FIELD)
+
+
+def _cursor_raw_value(raw: dict, field: str):
+    """Pull the scalar cursor value out of a raw record ({"value": ...} wrapper)."""
+    v = raw.get(field)
+    return v.get("value") if isinstance(v, dict) else v
+
+
+def _parse_dt(s: str) -> datetime:
+    """Parse an Acumatica timestamp, e.g. '2026-05-19T15:33:51.253+00:00' (or 'Z')."""
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+
+# ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
 
@@ -255,18 +295,38 @@ def build_headers(token: str) -> dict:
     }
 
 
+def _reauth(session, configuration, state) -> None:
+    """Mint a fresh access token mid-sync and swap it into the shared session.
+
+    Acumatica access tokens live only ~1 hour, but a comprehensive full-refresh
+    of every entity routinely runs longer than that. Rather than pre-computing
+    expiry, we re-auth reactively when a request 401s. get_token() uses (and
+    rotates) the refresh_token in `state`, so the credential chain keeps moving.
+    """
+    token = get_token(configuration, state)
+    session.headers.update(build_headers(token))
+
+
 # ---------------------------------------------------------------------------
 # Fetch
 # ---------------------------------------------------------------------------
 
-def fetch_page(session, base_url, endpoint, skip, expand, custom):
+def fetch_page(session, base_url, endpoint, skip, expand, custom, filt, configuration, state):
     params = {"$top": PAGE_SIZE, "$skip": skip}
     if expand:
         params["$expand"] = expand
     if custom:
         params["$custom"] = custom
+    if filt:
+        params["$filter"] = filt
     url = f"{base_url}/{endpoint}"
     resp = session.get(url, params=params, timeout=120)
+    if resp.status_code == 401:
+        # Access token almost certainly expired mid-sync. Re-auth once and retry;
+        # if it 401s again the raise_for_status() below surfaces a real auth error.
+        log.info(f"401 on {endpoint} @ skip={skip}; refreshing access token and retrying")
+        _reauth(session, configuration, state)
+        resp = session.get(url, params=params, timeout=120)
     if resp.status_code == 404:
         log.warning(f"Endpoint not found (404): {endpoint} — skipping")
         return []
@@ -279,10 +339,10 @@ def fetch_page(session, base_url, endpoint, skip, expand, custom):
     return []
 
 
-def fetch_all_pages(session, base_url, endpoint, expand, custom) -> Generator[dict, None, None]:
+def fetch_all_pages(session, base_url, endpoint, expand, custom, filt, configuration, state) -> Generator[dict, None, None]:
     skip = 0
     while True:
-        page = fetch_page(session, base_url, endpoint, skip, expand, custom)
+        page = fetch_page(session, base_url, endpoint, skip, expand, custom, filt, configuration, state)
         if not page:
             break
         for record in page:
@@ -329,7 +389,7 @@ def normalise_record(raw: dict, prefix: str = "") -> dict:
 # Sync
 # ---------------------------------------------------------------------------
 
-def sync_entity(session, base_url, entity, state) -> Generator:
+def sync_entity(session, base_url, entity, configuration, state) -> Generator:
     name = entity["name"]
     endpoint = entity["endpoint"]
     children_spec = entity.get("children", [])
@@ -346,14 +406,36 @@ def sync_entity(session, base_url, entity, state) -> Generator:
     # produce columns like custom_document_attribute_shltrtype.
     custom = ",".join(custom_fields) if custom_fields else None
 
-    log.info(f"Syncing {name} (full refresh)")
+    # Incremental cursor: pull only rows changed since the stored high-water mark.
+    # `ge` (not `gt`) re-pulls the boundary row(s) each run — harmless because every
+    # upsert is keyed on the immutable `id`, so a re-pull is idempotent, and it avoids
+    # dropping a row saved at the exact cursor timestamp just after the prior read.
+    cfield = cursor_field_for(entity)
+    cursors = state.setdefault("cursors", {})
+    saved = cursors.get(name) if cfield else None
+    filt = f"{cfield} ge datetimeoffset'{saved}'" if (cfield and saved) else None
+
+    mode = "incremental" if filt else ("full refresh — first run" if cfield else "full refresh")
+    log.info(f"Syncing {name} ({mode})")
     parent_count = 0
     child_counts = {c["table"]: 0 for c in children_spec}
+    max_cursor = None      # newest cursor value seen this run (ISO string)
+    max_cursor_dt = None   # its parsed form, so we don't re-parse the max each row
 
-    for raw in fetch_all_pages(session, base_url, endpoint, expand, custom):
+    for raw in fetch_all_pages(session, base_url, endpoint, expand, custom, filt, configuration, state):
         yield op.upsert(name, normalise_record(raw))
         parent_count += 1
         parent_id = raw.get("id")
+
+        if cfield:
+            cval = _cursor_raw_value(raw, cfield)
+            if cval:
+                try:
+                    dt = _parse_dt(cval)
+                except (ValueError, TypeError):
+                    dt = None
+                if dt and (max_cursor_dt is None or dt > max_cursor_dt):
+                    max_cursor, max_cursor_dt = cval, dt
 
         for c in children_spec:
             for child in raw.get(c["key"], []) or []:
@@ -361,6 +443,12 @@ def sync_entity(session, base_url, entity, state) -> Generator:
                 child_row.setdefault("parent_id", parent_id)
                 yield op.upsert(c["table"], child_row)
                 child_counts[c["table"]] += 1
+
+    # Advance the high-water mark only after the entity synced cleanly — a mid-entity
+    # failure then re-pulls the full delta next run rather than skipping rows. When no
+    # rows came back (nothing changed) max_cursor stays None and the mark is preserved.
+    if cfield and max_cursor:
+        cursors[name] = max_cursor
 
     summary = f"{parent_count} {name}"
     if child_counts:
@@ -395,7 +483,7 @@ def update(configuration: dict, state: dict):
 
     for entity in ENTITIES:
         try:
-            yield from sync_entity(session, base_url, entity, state)
+            yield from sync_entity(session, base_url, entity, configuration, state)
         except requests.exceptions.HTTPError as e:
             log.severe(f"HTTP error syncing {entity['name']}: {e}")
             raise
