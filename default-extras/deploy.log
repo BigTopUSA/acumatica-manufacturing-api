@@ -1,14 +1,14 @@
-31-Jul 14:22:17.016 INFO ⚡ sdk executing deploy: [0m
-31-Jul 14:22:17.016 INFO ⚡ sdk fivetran deploy --destination Snowflake_East_US2 --connection acumatica_default_extras --api-key bW15OUpW******** --configuration configuration.json --force [0m
-31-Jul 14:22:17.016 INFO ⚡ sdk skipping dependency validation; --force is set [0m
-31-Jul 14:22:18.418 INFO ⚡ sdk › updating connection acumatica_default_extras in group Snowflake_East_US2 [0m
-31-Jul 14:22:18.418 INFO ⚡ sdk › packaging project for upload [0m
-31-Jul 14:22:18.431 INFO ⚡ sdk ✓ project packaged for upload [0m
-31-Jul 14:22:18.431 INFO ⚡ sdk › uploading package [0m
-31-Jul 14:22:19.481 INFO ⚡ sdk ✓ package uploaded [0m
-31-Jul 14:22:19.481 INFO ⚡ sdk   package id: divers_hauled [0m
-31-Jul 14:23:21.958 INFO ⚡ sdk ✓ connection updated [0m
-31-Jul 14:23:21.959 INFO ⚡ sdk   connection id: monoclonal_innervation [0m
-31-Jul 14:23:21.959 INFO ⚡ sdk   runtime python version: 3.13 [0m
-31-Jul 14:23:21.959 INFO ⚡ sdk visit the Fivetran dashboard to manage the connection: [0m
-31-Jul 14:23:21.959 INFO ⚡ sdk https://fivetran.com/dashboard/connectors/monoclonal_innervation/status [0m
+18-Aug 16:29:42.670 INFO ⚡ sdk executing deploy: [0m
+18-Aug 16:29:42.670 INFO ⚡ sdk fivetran deploy --destination Snowflake_East_US2 --connection acumatica_default_extras --api-key bW15OUpW******** --configuration configuration.json --force [0m
+18-Aug 16:29:42.670 INFO ⚡ sdk skipping dependency validation; --force is set [0m
+18-Aug 16:29:43.362 INFO ⚡ sdk › updating connection acumatica_default_extras in group Snowflake_East_US2 [0m
+18-Aug 16:29:43.362 INFO ⚡ sdk › packaging project for upload [0m
+18-Aug 16:29:43.366 INFO ⚡ sdk ✓ project packaged for upload [0m
+18-Aug 16:29:43.366 INFO ⚡ sdk › uploading package [0m
+18-Aug 16:29:43.981 INFO ⚡ sdk ✓ package uploaded [0m
+18-Aug 16:29:43.982 INFO ⚡ sdk   package id: inscrutable_reigned [0m
+18-Aug 16:29:45.451 INFO ⚡ sdk ✓ connection updated [0m
+18-Aug 16:29:45.451 INFO ⚡ sdk   connection id: monoclonal_innervation [0m
+18-Aug 16:29:45.451 INFO ⚡ sdk   runtime python version: 3.13 [0m
+18-Aug 16:29:45.451 INFO ⚡ sdk visit the Fivetran dashboard to manage the connection: [0m
+18-Aug 16:29:45.451 INFO ⚡ sdk https://fivetran.com/dashboard/connectors/monoclonal_innervation/status [0m
