@@ -15,6 +15,7 @@ are pulled. A few entities expose no usable timestamp and stay full-refresh; see
 the incremental cursor policy below.
 """
 
+import re
 import requests
 import json
 from datetime import datetime
@@ -86,13 +87,16 @@ ENTITIES = [
             # User-Defined Fields tab on the Sales Orders screen — surfaced
             # as Acumatica Attributes on the Document section. Field IDs are
             # the internal codes (UI labels in the comment).
+            # 2026-08-18: ACCPERCENT, ELEPERCT, FINALCHECK and WARRANTY were
+            # unassigned from the Sales Order screen in Acumatica (the attribute
+            # definitions still exist tenant-wide). Requesting them now 500s with
+            # "column ... not found in the data set", which took the whole sync
+            # down. Removed here; re-add if they're ever reassigned to the order
+            # attribute class. fetch_page() also self-heals this failure mode.
             "Document.AttributeACCESSORIE",   # Accessories
-            "Document.AttributeACCPERCENT",   # Accessories Percentage
             "Document.AttributeCONEORDNBR",   # C1 Ord Nbr
             "Document.AttributeELECTRICAL",   # Electrical
-            "Document.AttributeELEPERCT",     # Electrical Percentage
             "Document.AttributeENDUSER",      # End Market User
-            "Document.AttributeFINALCHECK",   # Final Check
             "Document.AttributeHOTDIPPER",    # Hot Dipper
             "Document.AttributeINSTALLER1",   # Installer 1
             "Document.AttributeINSTALLER2",   # Installer 2
@@ -110,7 +114,6 @@ ENTITIES = [
             "Document.AttributeUNITS",        # Units
             "Document.AttributeUSECASE",      # Shelter Use
             "Document.AttributeVERTICALS",    # Sales Verticals
-            "Document.AttributeWARRANTY",     # Warranty
         ],
         "children": [
             {"key": "Details",    "table": "sales_order_detail"},
@@ -311,38 +314,65 @@ def _reauth(session, configuration, state) -> None:
 # Fetch
 # ---------------------------------------------------------------------------
 
-def fetch_page(session, base_url, endpoint, skip, expand, custom, filt, configuration, state):
-    params = {"$top": PAGE_SIZE, "$skip": skip}
-    if expand:
-        params["$expand"] = expand
-    if custom:
-        params["$custom"] = custom
-    if filt:
-        params["$filter"] = filt
+# Acumatica's error when a $custom field references an attribute that is no
+# longer assigned to the entity's screen (e.g. an admin unassigns a UDF from
+# the Sales Orders attribute class). The column name comes back with the '.'
+# flattened to '_': Document.AttributeFOO → 'Document_AttributeFOO'.
+_MISSING_COLUMN_RE = re.compile(r"The column '([^']+)' is not found in the data set")
+
+
+def fetch_page(session, base_url, endpoint, skip, expand, custom_parts, filt, configuration, state):
+    """Fetch one page. `custom_parts` is a MUTABLE list shared across the whole
+    entity sync: if Acumatica 500s because one of the $custom fields has been
+    unassigned from the screen, that field is dropped from the list (so every
+    subsequent page skips it too) and the request is retried — a missing
+    optional column shouldn't take the whole connector down."""
     url = f"{base_url}/{endpoint}"
-    resp = session.get(url, params=params, timeout=120)
-    if resp.status_code == 401:
-        # Access token almost certainly expired mid-sync. Re-auth once and retry;
-        # if it 401s again the raise_for_status() below surfaces a real auth error.
-        log.info(f"401 on {endpoint} @ skip={skip}; refreshing access token and retrying")
-        _reauth(session, configuration, state)
+    while True:
+        params = {"$top": PAGE_SIZE, "$skip": skip}
+        if expand:
+            params["$expand"] = expand
+        if custom_parts:
+            params["$custom"] = ",".join(custom_parts)
+        if filt:
+            params["$filter"] = filt
         resp = session.get(url, params=params, timeout=120)
-    if resp.status_code == 404:
-        log.warning(f"Endpoint not found (404): {endpoint} — skipping")
+        if resp.status_code == 401:
+            # Access token almost certainly expired mid-sync. Re-auth once and retry;
+            # if it 401s again the raise_for_status() below surfaces a real auth error.
+            log.info(f"401 on {endpoint} @ skip={skip}; refreshing access token and retrying")
+            _reauth(session, configuration, state)
+            resp = session.get(url, params=params, timeout=120)
+        if resp.status_code == 404:
+            log.warning(f"Endpoint not found (404): {endpoint} — skipping")
+            return []
+        if resp.status_code == 500 and custom_parts:
+            m = _MISSING_COLUMN_RE.search(resp.text)
+            dead = None
+            if m:
+                col = m.group(1)
+                dead = next((f for f in custom_parts if f.replace(".", "_") == col), None)
+            if dead:
+                log.warning(
+                    f"{endpoint}: custom field {dead} is no longer assigned to this "
+                    f"screen in Acumatica — dropping it for the rest of this sync. "
+                    f"Remove it from ENTITIES (or reassign the attribute) to clear this warning."
+                )
+                custom_parts.remove(dead)
+                continue
+        resp.raise_for_status()
+        data = resp.json()
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict) and "value" in data:
+            return data["value"]
         return []
-    resp.raise_for_status()
-    data = resp.json()
-    if isinstance(data, list):
-        return data
-    if isinstance(data, dict) and "value" in data:
-        return data["value"]
-    return []
 
 
-def fetch_all_pages(session, base_url, endpoint, expand, custom, filt, configuration, state) -> Generator[dict, None, None]:
+def fetch_all_pages(session, base_url, endpoint, expand, custom_parts, filt, configuration, state) -> Generator[dict, None, None]:
     skip = 0
     while True:
-        page = fetch_page(session, base_url, endpoint, skip, expand, custom, filt, configuration, state)
+        page = fetch_page(session, base_url, endpoint, skip, expand, custom_parts, filt, configuration, state)
         if not page:
             break
         for record in page:
@@ -403,8 +433,10 @@ def sync_entity(session, base_url, entity, configuration, state) -> Generator:
 
     # $custom pulls user-defined / Attribute fields that aren't returned by
     # default. Each entry is "Section.FieldName" — recursive flattener will
-    # produce columns like custom_document_attribute_shltrtype.
-    custom = ",".join(custom_fields) if custom_fields else None
+    # produce columns like custom_document_attribute_shltrtype. Copied to a
+    # fresh mutable list so fetch_page() can drop fields Acumatica no longer
+    # exposes without mutating the module-level ENTITIES spec.
+    custom_parts = list(custom_fields)
 
     # Incremental cursor: pull only rows changed since the stored high-water mark.
     # `ge` (not `gt`) re-pulls the boundary row(s) each run — harmless because every
@@ -422,7 +454,7 @@ def sync_entity(session, base_url, entity, configuration, state) -> Generator:
     max_cursor = None      # newest cursor value seen this run (ISO string)
     max_cursor_dt = None   # its parsed form, so we don't re-parse the max each row
 
-    for raw in fetch_all_pages(session, base_url, endpoint, expand, custom, filt, configuration, state):
+    for raw in fetch_all_pages(session, base_url, endpoint, expand, custom_parts, filt, configuration, state):
         yield op.upsert(name, normalise_record(raw))
         parent_count += 1
         parent_id = raw.get("id")
