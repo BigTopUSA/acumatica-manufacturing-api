@@ -184,9 +184,13 @@ PAGE_SIZE = 100
 # rarely-changing tables, so a full refresh each run costs almost nothing.
 # SalesOrder is the lone entity whose field is named `LastModified` rather than
 # `LastModifiedDateTime`.
+# stock_item DOES expose a usable timestamp, but Qty On Hand (WarehouseDetails)
+# is computed from INSiteStatus at read time — inventory transactions change the
+# quantity without touching the item's LastModifiedDateTime, so an incremental
+# pull silently freezes quantities. Full refresh is the only way to keep them live.
 DEFAULT_CURSOR_FIELD = "LastModifiedDateTime"
 CURSOR_FIELD_OVERRIDES = {"sales_order": "LastModified"}
-FULL_REFRESH_ONLY = {"sub_account", "physical_inventory_review", "units_of_measure"}
+FULL_REFRESH_ONLY = {"sub_account", "physical_inventory_review", "units_of_measure", "stock_item"}
 
 
 def cursor_field_for(entity: dict) -> str | None:
