@@ -352,6 +352,11 @@ def update(configuration: dict, state: dict):
     log.info(f"Connecting to Acumatica Manufacturing API: {base_url}")
 
     token = get_token(configuration, state)
+    # get_token() just consumed the single-use refresh token and rotated it in
+    # `state`. Persist that immediately — if the first entity fails before the
+    # end-of-entity checkpoint, an unpersisted rotation kills the credential
+    # chain and forces a manual re-auth (the recurring Aug/Sep 2026 incident).
+    yield op.checkpoint(state)
     session = requests.Session()
     session.headers.update(build_headers(token))
 
