@@ -1,15 +1,15 @@
-18-Aug 16:29:28.559 INFO ⚡ sdk executing deploy: [0m
-18-Aug 16:29:28.559 INFO ⚡ sdk fivetran deploy --destination Snowflake_East_US2 --connection acumatica_manufacturing --api-key bW15OUpW******** --configuration configuration.json --force [0m
-18-Aug 16:29:28.559 INFO ⚡ sdk skipping dependency validation; --force is set [0m
-18-Aug 16:29:29.255 INFO ⚡ sdk › updating connection acumatica_manufacturing in group Snowflake_East_US2 [0m
-18-Aug 16:29:29.255 INFO ⚡ sdk › packaging project for upload [0m
-18-Aug 16:29:29.257 INFO ⚡ sdk loaded .gitignore with 12 patterns [0m
-18-Aug 16:29:29.268 INFO ⚡ sdk ✓ project packaged for upload [0m
-18-Aug 16:29:29.268 INFO ⚡ sdk › uploading package [0m
-18-Aug 16:29:31.986 INFO ⚡ sdk ✓ package uploaded [0m
-18-Aug 16:29:31.988 INFO ⚡ sdk   package id: numbered_outfit [0m
-18-Aug 16:29:33.755 INFO ⚡ sdk ✓ connection updated [0m
-18-Aug 16:29:33.755 INFO ⚡ sdk   connection id: rescuer_headstone [0m
-18-Aug 16:29:33.755 INFO ⚡ sdk   runtime python version: 3.13 [0m
-18-Aug 16:29:33.755 INFO ⚡ sdk visit the Fivetran dashboard to manage the connection: [0m
-18-Aug 16:29:33.755 INFO ⚡ sdk https://fivetran.com/dashboard/connectors/rescuer_headstone/status [0m
+04-Sep 14:23:35.746 INFO ⚡ sdk executing deploy: [0m
+04-Sep 14:23:35.746 INFO ⚡ sdk fivetran deploy --destination Snowflake_East_US2 --connection acumatica_manufacturing --api-key bW15OUpW******** --configuration configuration.json --force [0m
+04-Sep 14:23:35.746 INFO ⚡ sdk skipping dependency validation; --force is set [0m
+04-Sep 14:23:40.567 INFO ⚡ sdk › updating connection acumatica_manufacturing in group Snowflake_East_US2 [0m
+04-Sep 14:23:40.567 INFO ⚡ sdk › packaging project for upload [0m
+04-Sep 14:23:40.614 INFO ⚡ sdk loaded .gitignore with 12 patterns [0m
+04-Sep 14:23:40.972 INFO ⚡ sdk ✓ project packaged for upload [0m
+04-Sep 14:23:40.972 INFO ⚡ sdk › uploading package [0m
+04-Sep 14:23:43.775 INFO ⚡ sdk ✓ package uploaded [0m
+04-Sep 14:23:43.778 INFO ⚡ sdk   package id: resorting_spectrum [0m
+04-Sep 14:23:47.064 INFO ⚡ sdk ✓ connection updated [0m
+04-Sep 14:23:47.064 INFO ⚡ sdk   connection id: rescuer_headstone [0m
+04-Sep 14:23:47.064 INFO ⚡ sdk   runtime python version: 3.13 [0m
+04-Sep 14:23:47.064 INFO ⚡ sdk visit the Fivetran dashboard to manage the connection: [0m
+04-Sep 14:23:47.064 INFO ⚡ sdk https://fivetran.com/dashboard/connectors/rescuer_headstone/status [0m

@@ -1,14 +1,14 @@
-25-Aug 16:14:07.739 INFO ⚡ sdk executing deploy: 
-25-Aug 16:14:07.739 INFO ⚡ sdk fivetran deploy --destination Snowflake_East_US2 --connection acumatica_default_extras --api-key bW15OUpW******** --configuration configuration.json --force 
-25-Aug 16:14:07.739 INFO ⚡ sdk skipping dependency validation; --force is set 
-25-Aug 16:14:08.389 INFO ⚡ sdk › updating connection acumatica_default_extras in group Snowflake_East_US2 
-25-Aug 16:14:08.389 INFO ⚡ sdk › packaging project for upload 
-25-Aug 16:14:08.413 INFO ⚡ sdk ✓ project packaged for upload 
-25-Aug 16:14:08.413 INFO ⚡ sdk › uploading package 
-25-Aug 16:14:09.121 INFO ⚡ sdk ✓ package uploaded 
-25-Aug 16:14:09.122 INFO ⚡ sdk   package id: wreckage_summer 
-25-Aug 16:14:10.531 INFO ⚡ sdk ✓ connection updated 
-25-Aug 16:14:10.531 INFO ⚡ sdk   connection id: monoclonal_innervation 
-25-Aug 16:14:10.531 INFO ⚡ sdk   runtime python version: 3.13 
-25-Aug 16:14:10.531 INFO ⚡ sdk visit the Fivetran dashboard to manage the connection: 
-25-Aug 16:14:10.531 INFO ⚡ sdk https://fivetran.com/dashboard/connectors/monoclonal_innervation/status 
+04-Sep 14:24:11.011 INFO ⚡ sdk executing deploy: [0m
+04-Sep 14:24:11.011 INFO ⚡ sdk fivetran deploy --destination Snowflake_East_US2 --connection acumatica_default_extras --api-key bW15OUpW******** --configuration configuration.json --force [0m
+04-Sep 14:24:11.011 INFO ⚡ sdk skipping dependency validation; --force is set [0m
+04-Sep 14:24:12.154 INFO ⚡ sdk › updating connection acumatica_default_extras in group Snowflake_East_US2 [0m
+04-Sep 14:24:12.154 INFO ⚡ sdk › packaging project for upload [0m
+04-Sep 14:24:12.165 INFO ⚡ sdk ✓ project packaged for upload [0m
+04-Sep 14:24:12.165 INFO ⚡ sdk › uploading package [0m
+04-Sep 14:24:13.078 INFO ⚡ sdk ✓ package uploaded [0m
+04-Sep 14:24:13.081 INFO ⚡ sdk   package id: outmatch_counseling [0m
+04-Sep 14:24:15.839 INFO ⚡ sdk ✓ connection updated [0m
+04-Sep 14:24:15.839 INFO ⚡ sdk   connection id: monoclonal_innervation [0m
+04-Sep 14:24:15.841 INFO ⚡ sdk   runtime python version: 3.13 [0m
+04-Sep 14:24:15.841 INFO ⚡ sdk visit the Fivetran dashboard to manage the connection: [0m
+04-Sep 14:24:15.841 INFO ⚡ sdk https://fivetran.com/dashboard/connectors/monoclonal_innervation/status [0m
