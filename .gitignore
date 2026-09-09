@@ -15,3 +15,5 @@ settings.local.json
 
 # Fivetran SDK debug output
 files/
+.fivetran_key
+monitor.log
