@@ -18,7 +18,7 @@ the incremental cursor policy below.
 import re
 import requests
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Generator
 
 from fivetran_connector_sdk import Connector, Operations as op, Logging as log
@@ -79,6 +79,13 @@ ENTITIES = [
         "expand_inline": ["BillToAddress", "ShipToAddress", "ShipToContact"],
         "children": [{"key": "Details", "table": "sales_invoice_detail"}]},
     {"name": "sales_order",             "endpoint": "SalesOrder",
+        # Attribute values (CSAnswers) can be changed by imports/mass updates
+        # without bumping the order's LastModified, so the incremental cursor
+        # alone lets attribute-only edits drift stale forever (seen 2026-09:
+        # an End Market User cleanup wave left orders with pre-cleanup values).
+        # At most once per this many hours, one run ignores the cursor and
+        # re-pulls the whole entity so those edits land.
+        "full_sweep_hours": 24,
         "expand_inline": [
             "BillToAddress", "ShipToAddress",
             "BillToContact", "ShipToContact",
@@ -449,9 +456,31 @@ def sync_entity(session, base_url, entity, configuration, state) -> Generator:
     cfield = cursor_field_for(entity)
     cursors = state.setdefault("cursors", {})
     saved = cursors.get(name) if cfield else None
+
+    # Periodic full sweep: entities that opt in via `full_sweep_hours` ignore
+    # the cursor once per window, because attribute-only edits don't bump the
+    # record's modified timestamp and are otherwise invisible (see the
+    # sales_order entity note). First run after deploy sweeps immediately.
+    sweep_hours = entity.get("full_sweep_hours")
+    sweeps = state.setdefault("full_sweeps", {})
+    sweep_due = False
+    if cfield and sweep_hours:
+        last_sweep = sweeps.get(name)
+        if last_sweep:
+            try:
+                sweep_due = datetime.now(timezone.utc) - _parse_dt(last_sweep) >= timedelta(hours=sweep_hours)
+            except (ValueError, TypeError):
+                sweep_due = True
+        else:
+            sweep_due = True
+    if sweep_due:
+        saved = None
+
     filt = f"{cfield} ge datetimeoffset'{saved}'" if (cfield and saved) else None
 
-    mode = "incremental" if filt else ("full refresh — first run" if cfield else "full refresh")
+    mode = ("full sweep" if (cfield and sweep_due) else
+            "incremental" if filt else
+            ("full refresh — first run" if cfield else "full refresh"))
     log.info(f"Syncing {name} ({mode})")
     parent_count = 0
     child_counts = {c["table"]: 0 for c in children_spec}
@@ -485,6 +514,10 @@ def sync_entity(session, base_url, entity, configuration, state) -> Generator:
     # rows came back (nothing changed) max_cursor stays None and the mark is preserved.
     if cfield and max_cursor:
         cursors[name] = max_cursor
+    # Stamp the sweep only after the entity synced cleanly, so a failed sweep
+    # retries next run instead of waiting out the next window.
+    if sweep_due:
+        sweeps[name] = datetime.now(timezone.utc).isoformat()
 
     summary = f"{parent_count} {name}"
     if child_counts:
