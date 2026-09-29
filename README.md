@@ -82,14 +82,35 @@ So the connector uses the **Refresh Token** grant:
 
 ### Re-authentication
 
-Refresh tokens eventually expire (Acumatica defaults to 60 days but
-sliding expiration extends this on every use). If a sync fails with
-`invalid_grant`, the refresh token chain is broken and someone needs to:
+**Every chain dies 60 days after the interactive authorization that started
+it, no matter how often it rotates.** Sliding expiration does *not* extend the
+absolute lifetime. Proven 2026-09-29: default-extras was authorized 2026-07-31
+17:48 UTC, synced cleanly at 11:56 UTC on day 60, and returned `invalid_grant`
+on both the state token and the config token at 17:56 UTC. Rotation had been
+working perfectly the whole time.
 
-1. Run the auth flow in Postman again
-2. Copy the new `refresh_token`
-3. Update `configuration.json` (or the value in the Fivetran connector config)
-4. Redeploy or save the config
+So each connector needs a fresh authorization roughly every two months.
+`monitor.py` warns at day 53 (it reads `refresh_token_seeded_at`, which
+`reseed.py` stamps into `configuration.json`). When it fires, or when a sync
+fails with `invalid_grant`:
+
+1. `python reseed.py --config <connector>/configuration.json` prints the
+   Acumatica authorize URL. Open it, log in, copy the URL you land on.
+2. `python reseed.py "<that url>" --config <connector>/configuration.json`
+   exchanges the code and writes the new `refresh_token` (plus the seed
+   timestamp) into the config.
+3. Redeploy that connector (`fivetran deploy ... --force`). The connector sees
+   the new config token and supersedes the dead one in Fivetran state.
+
+Each connector needs its **own** authorization (tokens are single-use, so a
+token shared between the two dies on the first sync). Two connectors = open
+the URL twice.
+
+**Durable fix (needs a BigTop Acumatica admin):** on the Connected Application
+(screen SM303010, available since 2023 R2), set refresh-token expiration to
+*Sliding* with an *Infinite* absolute lifetime, and ideally token usage to
+*Reuse*. Then the chain lives as long as the connector syncs at least once per
+sliding window, and the 60-day re-auth ritual goes away.
 
 ---
 
@@ -278,7 +299,9 @@ SELECT MAX(_fivetran_synced) FROM bt_raw.acumatica_manufacturing.bill_of_materia
 
 | Symptom | Likely cause |
 |---|---|
-| `invalid_grant` on token endpoint | Refresh token was rotated by another sync (local *or* Fivetran). Re-auth in Postman, update config. |
+| `invalid_grant` on **both** candidates at sync start, connector was healthy hours earlier | The 60-day absolute lifetime of the refresh-token chain expired (count from the last interactive auth). `python reseed.py`, redeploy. See Re-authentication. |
+| `invalid_grant` on token endpoint right after a change | Refresh token was rotated by another sync (local *or* Fivetran) or a rotation was lost before checkpoint. `python reseed.py`, redeploy. |
+| Need the actual error text of a failed Fivetran run | `BT_RAW.FIVETRAN_METADATA.CONNECTOR_SDK_LOG` (filter `connection_id`, compare `event_time` with an explicit `+00:00` offset). Force-sync the `fivetran_metadata` connector (`pier_ore`) first if the run is recent. |
 | `invalid_client` on token endpoint | Wrong client_id / secret, or the OAuth client was deleted/disabled in Acumatica. |
 | `unauthorized_client` | The OAuth grant type isn't enabled on this client. Need to enable it in Acumatica's Connected Applications screen (Authorization Code + Refresh Token). |
 | `401` mid-sync, then recovers | Access token expired during a long sync. The connector re-mints; not a real issue. |

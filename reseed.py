@@ -21,11 +21,19 @@ pass --config default-extras/configuration.json for the extras connector.
 import argparse
 import json
 import sys
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlparse, parse_qs
 
 import requests
 
 DEFAULT_REDIRECT = "https://oauth.pstmn.io/v1/callback"
+
+# Acumatica expires a refresh-token chain this many days after the interactive
+# authorization that started it, no matter how many times it has rotated since.
+# Observed 2026-09-29: default-extras died 60 days (to the minute) after its
+# 2026-07-31 seed, having synced cleanly six hours earlier. Only a new
+# authorization resets the clock — hence this script.
+CHAIN_LIFETIME_DAYS = 60
 
 
 def load_cfg(path):
@@ -78,10 +86,17 @@ def exchange(cfg_path, cfg, code, redirect_uri):
             "granted? Check the Acumatica connected app allows it."
         )
     cfg["refresh_token"] = refresh
+    # Non-secret bookkeeping so monitor.py can warn a week before the 60-day
+    # wall. Fivetran passes every config key through to the connector; values
+    # must be strings, so store ISO text.
+    seeded = datetime.now(timezone.utc)
+    cfg["refresh_token_seeded_at"] = seeded.isoformat(timespec="seconds")
     with open(cfg_path, "w") as f:
         json.dump(cfg, f, indent=2)
         f.write("\n")
+    expires = seeded + timedelta(days=CHAIN_LIFETIME_DAYS)
     print(f"OK — refresh token (…{refresh[-6:]}) written to {cfg_path}.")
+    print(f"This chain expires on ~{expires:%Y-%m-%d} (Acumatica's {CHAIN_LIFETIME_DAYS}-day absolute lifetime).")
     print("Now redeploy so the connector picks it up (config token supersedes state).")
 
 
