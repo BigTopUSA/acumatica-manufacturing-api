@@ -197,7 +197,12 @@ PAGE_SIZE = 100
 # pull silently freezes quantities. Full refresh is the only way to keep them live.
 DEFAULT_CURSOR_FIELD = "LastModifiedDateTime"
 CURSOR_FIELD_OVERRIDES = {"sales_order": "LastModified"}
-FULL_REFRESH_ONLY = {"sub_account", "physical_inventory_review", "units_of_measure", "stock_item"}
+# financial_period: period status (Open/Closed/Locked) and the per-module close
+# flags live on the Details rows. Opening or closing a month in Acumatica changes
+# those rows but not the year's LastModifiedDateTime, so an incremental pull froze
+# every 2026 month at its 2026-08-17 state. 13 years / ~170 rows: full refresh.
+FULL_REFRESH_ONLY = {"sub_account", "physical_inventory_review", "units_of_measure", "stock_item",
+                     "financial_period"}
 
 
 def cursor_field_for(entity: dict) -> str | None:
